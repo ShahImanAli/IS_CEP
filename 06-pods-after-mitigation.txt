@@ -1,0 +1,37 @@
+﻿# Phase 7 - pods after mitigation (AFTER) - 2026-10-25T17:04:38.3875049+05:00
+## bad-tenant pods (expect NONE - attack blocked)
+kubectl : No resources found in bad-tenant namespace.
+At line:12 char:1
++ kubectl get pods -n bad-tenant 2>&1 | Out-File $f6 -Append -Encoding  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (No resources fo...nant namespace.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+## victim DaemonSet pods (expect all Running - NOT evicted)
+NAME                   READY   STATUS    RESTARTS   AGE     IP            NODE      NOMINATED NODE   READINESS GATES
+ds-no-priority-dzq6q   1/1     Running   0          8m46s   10.244.0.26   cep       <none>           <none>
+ds-no-priority-pxqkr   1/1     Running   0          8m45s   10.244.1.25   cep-m02   <none>           <none>
+ds-no-priority-t6ghb   1/1     Running   0          8m51s   10.244.2.25   cep-m03   <none>           <none>
+
+## ResourceQuota usage (expect 0 pods used)
+NAME               REQUEST                                                 LIMIT                                   AGE
+bad-tenant-quota   pods: 0/10, requests.cpu: 0/2, requests.memory: 0/2Gi   limits.cpu: 0/4, limits.memory: 0/4Gi   108s
+
+## kubectl top nodes
+NAME      CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+cep       532m         6%       1008Mi          13%         
+cep-m02   126m         1%       336Mi           4%          
+cep-m03   122m         1%       265Mi           3%          
+
+## recent bad-tenant events (Kyverno denials)
+5m32s       Normal    Killing             pod/deployment-stuffer-94ddf8d68-wffrd      Stopping container stuffer
+5m32s       Normal    Killing             pod/deployment-stuffer-94ddf8d68-q4tlz      Stopping container stuffer
+5m32s       Normal    Killing             pod/deployment-stuffer-94ddf8d68-4fkqg      Stopping container stuffer
+5m32s       Normal    Killing             pod/deployment-stuffer-94ddf8d68-vq5tn      Stopping container stuffer
+5m32s       Normal    Killing             pod/deployment-stuffer-94ddf8d68-ndtgx      Stopping container stuffer
+5m32s       Normal    Killing             pod/deployment-stuffer-94ddf8d68-p2nn2      Stopping container stuffer
+5m32s       Normal    Killing             pod/deployment-stuffer-94ddf8d68-r5k8m      Stopping container stuffer
+5m32s       Normal    Killing             pod/deployment-stuffer-94ddf8d68-jhlqr      Stopping container stuffer
+5m32s       Normal    Killing             pod/deployment-stuffer-94ddf8d68-c69f9      Stopping container stuffer
+5m32s       Normal    Killing             pod/evictor                                 Stopping container evictor

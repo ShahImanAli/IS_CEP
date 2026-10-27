@@ -1,0 +1,71 @@
+﻿# Phase 5 - pods after attack (BEFORE mitigation) - 2026-10-25T16:56:12.3721178+05:00
+## kubectl get pods -A -o wide
+NAMESPACE     NAME                                 READY   STATUS    RESTARTS   AGE   IP             NODE      NOMINATED NODE   READINESS GATES
+bad-tenant    deployment-stuffer-94ddf8d68-4fkqg   1/1     Running   0          31s   10.244.2.20    cep-m03   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-6xzb4   1/1     Running   0          31s   10.244.1.22    cep-m02   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-8jr7l   1/1     Running   0          31s   10.244.2.18    cep-m03   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-c69f9   1/1     Running   0          31s   10.244.2.21    cep-m03   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-ct9r9   1/1     Running   0          31s   10.244.1.20    cep-m02   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-h4cf4   1/1     Running   0          31s   10.244.1.18    cep-m02   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-hpf4s   1/1     Running   0          31s   10.244.0.23    cep       <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-jhlqr   1/1     Running   0          31s   10.244.0.20    cep       <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-l25ht   1/1     Running   0          31s   10.244.1.23    cep-m02   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-ndtgx   1/1     Running   0          31s   10.244.2.24    cep-m03   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-p2nn2   1/1     Running   0          31s   10.244.1.19    cep-m02   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-pc9n9   1/1     Running   0          31s   10.244.1.21    cep-m02   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-plc5c   1/1     Running   0          31s   10.244.0.25    cep       <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-q4tlz   1/1     Running   0          31s   10.244.0.22    cep       <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-qjsp5   1/1     Running   0          31s   10.244.0.21    cep       <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-r5k8m   1/1     Running   0          31s   10.244.0.19    cep       <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-spz6k   1/1     Running   0          31s   10.244.0.24    cep       <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-vq5tn   1/1     Running   0          31s   10.244.2.19    cep-m03   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-vw6lc   1/1     Running   0          31s   10.244.2.23    cep-m03   <none>           <none>
+bad-tenant    deployment-stuffer-94ddf8d68-wffrd   1/1     Running   0          31s   10.244.2.22    cep-m03   <none>           <none>
+bad-tenant    evictor                              1/1     Running   0          24s   10.244.1.24    cep-m02   <none>           <none>
+default       ds-no-priority-dzq6q                 0/1     Pending   0          20s   <none>         <none>    <none>           <none>
+default       ds-no-priority-pxqkr                 0/1     Pending   0          19s   <none>         <none>    <none>           <none>
+default       ds-no-priority-t6ghb                 0/1     Pending   0          25s   <none>         <none>    <none>           <none>
+kube-system   coredns-559f6c778d-hfq7m             1/1     Running   0          59m   10.244.0.2     cep       <none>           <none>
+kube-system   coredns-559f6c778d-wvqfn             1/1     Running   0          59m   10.244.0.3     cep       <none>           <none>
+kube-system   etcd-cep                             1/1     Running   0          60m   192.168.58.2   cep       <none>           <none>
+kube-system   kindnet-d24tk                        1/1     Running   0          59m   192.168.58.2   cep       <none>           <none>
+kube-system   kindnet-rfc77                        1/1     Running   0          27m   192.168.58.4   cep-m03   <none>           <none>
+kube-system   kindnet-v8q9g                        1/1     Running   0          28m   192.168.58.3   cep-m02   <none>           <none>
+kube-system   kube-apiserver-cep                   1/1     Running   0          60m   192.168.58.2   cep       <none>           <none>
+kube-system   kube-controller-manager-cep          1/1     Running   0          60m   192.168.58.2   cep       <none>           <none>
+kube-system   kube-proxy-bwgxd                     1/1     Running   0          59m   192.168.58.2   cep       <none>           <none>
+kube-system   kube-proxy-s68n9                     1/1     Running   0          27m   192.168.58.4   cep-m03   <none>           <none>
+kube-system   kube-proxy-zx92m                     1/1     Running   0          28m   192.168.58.3   cep-m02   <none>           <none>
+kube-system   kube-scheduler-cep                   1/1     Running   0          60m   192.168.58.2   cep       <none>           <none>
+kube-system   metrics-server-69c966f4f9-bxnzx      1/1     Running   0          14m   10.244.2.2     cep-m03   <none>           <none>
+kube-system   storage-provisioner                  1/1     Running   0          59m   192.168.58.2   cep       <none>           <none>
+
+## bad-tenant (attacker) pods
+NAME                                 READY   STATUS    RESTARTS   AGE   IP            NODE      NOMINATED NODE   READINESS GATES
+deployment-stuffer-94ddf8d68-4fkqg   1/1     Running   0          31s   10.244.2.20   cep-m03   <none>           <none>
+deployment-stuffer-94ddf8d68-6xzb4   1/1     Running   0          31s   10.244.1.22   cep-m02   <none>           <none>
+deployment-stuffer-94ddf8d68-8jr7l   1/1     Running   0          31s   10.244.2.18   cep-m03   <none>           <none>
+deployment-stuffer-94ddf8d68-c69f9   1/1     Running   0          31s   10.244.2.21   cep-m03   <none>           <none>
+deployment-stuffer-94ddf8d68-ct9r9   1/1     Running   0          31s   10.244.1.20   cep-m02   <none>           <none>
+deployment-stuffer-94ddf8d68-h4cf4   1/1     Running   0          31s   10.244.1.18   cep-m02   <none>           <none>
+deployment-stuffer-94ddf8d68-hpf4s   1/1     Running   0          31s   10.244.0.23   cep       <none>           <none>
+deployment-stuffer-94ddf8d68-jhlqr   1/1     Running   0          31s   10.244.0.20   cep       <none>           <none>
+deployment-stuffer-94ddf8d68-l25ht   1/1     Running   0          31s   10.244.1.23   cep-m02   <none>           <none>
+deployment-stuffer-94ddf8d68-ndtgx   1/1     Running   0          31s   10.244.2.24   cep-m03   <none>           <none>
+deployment-stuffer-94ddf8d68-p2nn2   1/1     Running   0          31s   10.244.1.19   cep-m02   <none>           <none>
+deployment-stuffer-94ddf8d68-pc9n9   1/1     Running   0          31s   10.244.1.21   cep-m02   <none>           <none>
+deployment-stuffer-94ddf8d68-plc5c   1/1     Running   0          31s   10.244.0.25   cep       <none>           <none>
+deployment-stuffer-94ddf8d68-q4tlz   1/1     Running   0          31s   10.244.0.22   cep       <none>           <none>
+deployment-stuffer-94ddf8d68-qjsp5   1/1     Running   0          31s   10.244.0.21   cep       <none>           <none>
+deployment-stuffer-94ddf8d68-r5k8m   1/1     Running   0          31s   10.244.0.19   cep       <none>           <none>
+deployment-stuffer-94ddf8d68-spz6k   1/1     Running   0          31s   10.244.0.24   cep       <none>           <none>
+deployment-stuffer-94ddf8d68-vq5tn   1/1     Running   0          31s   10.244.2.19   cep-m03   <none>           <none>
+deployment-stuffer-94ddf8d68-vw6lc   1/1     Running   0          31s   10.244.2.23   cep-m03   <none>           <none>
+deployment-stuffer-94ddf8d68-wffrd   1/1     Running   0          31s   10.244.2.22   cep-m03   <none>           <none>
+evictor                              1/1     Running   0          24s   10.244.1.24   cep-m02   <none>           <none>
+
+## victim DaemonSet pods (default ns) - expect Pending = DoS
+NAME                   READY   STATUS    RESTARTS   AGE   IP       NODE     NOMINATED NODE   READINESS GATES
+ds-no-priority-dzq6q   0/1     Pending   0          21s   <none>   <none>   <none>           <none>
+ds-no-priority-pxqkr   0/1     Pending   0          20s   <none>   <none>   <none>           <none>
+ds-no-priority-t6ghb   0/1     Pending   0          26s   <none>   <none>   <none>           <none>

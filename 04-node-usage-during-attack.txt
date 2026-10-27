@@ -1,0 +1,11 @@
+﻿# Phase 5 - node usage during attack (BEFORE) - 2026-10-25T16:56:13.3385255+05:00
+## kubectl top nodes
+NAME      CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)   
+cep       522m         6%       769Mi           10%         
+cep-m02   138m         1%       198Mi           2%          
+cep-m03   92m          1%       195Mi           2%          
+
+## Allocated CPU/mem requests per node
+cep : cpu                7950m (99%)   7100m (88%) | memory             1186Mi (15%)  1286Mi (17%)
+cep-m02 : cpu                7100m (88%)  7100m (88%) | memory             946Mi (12%)  946Mi (12%)
+cep-m03 : cpu                7200m (90%)   7100m (88%) | memory             1146Mi (15%)  946Mi (12%)

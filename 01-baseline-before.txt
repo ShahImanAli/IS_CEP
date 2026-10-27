@@ -1,0 +1,26 @@
+﻿# Phase 3 baseline - captured 2026-10-25T16:44:15.0739782+05:00
+## kubectl get pods -A -o wide
+NAMESPACE     NAME                              READY   STATUS    RESTARTS   AGE     IP             NODE      NOMINATED NODE   READINESS GATES
+default       ds-no-priority-7v86s              1/1     Running   0          18s     10.244.0.4     cep       <none>           <none>
+default       ds-no-priority-bzxv4              1/1     Running   0          18s     10.244.2.3     cep-m03   <none>           <none>
+default       ds-no-priority-hsfdx              1/1     Running   0          18s     10.244.1.3     cep-m02   <none>           <none>
+kube-system   coredns-559f6c778d-hfq7m          1/1     Running   0          48m     10.244.0.2     cep       <none>           <none>
+kube-system   coredns-559f6c778d-wvqfn          1/1     Running   0          48m     10.244.0.3     cep       <none>           <none>
+kube-system   etcd-cep                          1/1     Running   0          48m     192.168.58.2   cep       <none>           <none>
+kube-system   kindnet-d24tk                     1/1     Running   0          48m     192.168.58.2   cep       <none>           <none>
+kube-system   kindnet-rfc77                     1/1     Running   0          15m     192.168.58.4   cep-m03   <none>           <none>
+kube-system   kindnet-v8q9g                     1/1     Running   0          16m     192.168.58.3   cep-m02   <none>           <none>
+kube-system   kube-apiserver-cep                1/1     Running   0          48m     192.168.58.2   cep       <none>           <none>
+kube-system   kube-controller-manager-cep       1/1     Running   0          48m     192.168.58.2   cep       <none>           <none>
+kube-system   kube-proxy-bwgxd                  1/1     Running   0          48m     192.168.58.2   cep       <none>           <none>
+kube-system   kube-proxy-s68n9                  1/1     Running   0          15m     192.168.58.4   cep-m03   <none>           <none>
+kube-system   kube-proxy-zx92m                  1/1     Running   0          16m     192.168.58.3   cep-m02   <none>           <none>
+kube-system   kube-scheduler-cep                1/1     Running   0          48m     192.168.58.2   cep       <none>           <none>
+kube-system   metrics-server-69c966f4f9-bxnzx   1/1     Running   0          2m34s   10.244.2.2     cep-m03   <none>           <none>
+kube-system   storage-provisioner               1/1     Running   0          47m     192.168.58.2   cep       <none>           <none>
+
+## victim pods (default ns, ds-no-priority)
+NAME                   READY   STATUS    RESTARTS   AGE   IP           NODE      NOMINATED NODE   READINESS GATES
+ds-no-priority-7v86s   1/1     Running   0          18s   10.244.0.4   cep       <none>           <none>
+ds-no-priority-bzxv4   1/1     Running   0          18s   10.244.2.3   cep-m03   <none>           <none>
+ds-no-priority-hsfdx   1/1     Running   0          18s   10.244.1.3   cep-m02   <none>           <none>

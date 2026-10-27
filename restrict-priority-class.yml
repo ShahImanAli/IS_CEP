@@ -1,0 +1,36 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-priority-class-bad-tenant
+  annotations:
+    policies.kyverno.io/title: Restrict High Priority Class for bad-tenant
+    policies.kyverno.io/category: Multi-Tenancy Security
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Prevents the bad-tenant namespace from creating Pods that use a
+      preempting high-priority PriorityClass, blocking pod-preemption DoS abuse.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: block-high-priority-in-bad-tenant
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - bad-tenant
+      validate:
+        message: >-
+          Pods in the 'bad-tenant' namespace are not allowed to use a
+          preempting high-priority PriorityClass ('high-priority' or
+          'attacker-high-priority'). Use 'high-priority-nonpreempting' instead.
+        deny:
+          conditions:
+            any:
+              - key: "{{ request.object.spec.priorityClassName || '' }}"
+                operator: AnyIn
+                value:
+                  - "high-priority"
+                  - "attacker-high-priority"

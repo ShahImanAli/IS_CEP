@@ -1,0 +1,89 @@
+﻿# Phase 7 attack re-run (AFTER mitigation) - started 2026-10-25T17:04:02.5925630+05:00
+## command: py evict.py -n bad-tenant -r 20 --cpu 1 -p high-priority -t 7
+
+py : Traceback (most recent call last):
+At line:7 char:1
++ py "$repo\evict.py" -n bad-tenant -r 20 --cpu 1 -p high-priority -t 7 ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\shahi\Desktop\IS_CEP\kube-podpreemption-DoS\evict.py", line 130, in <module>
+    evict(args)
+    ~~~~~^^^^^^
+  File "C:\Users\shahi\Desktop\IS_CEP\kube-podpreemption-DoS\evict.py", line 110, in evict
+    create_high_priority_deployment(apps_v1, deployment,args.namespace,args.replicas)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\shahi\Desktop\IS_CEP\kube-podpreemption-DoS\evict.py", line 53, in create_high_priority_deployment
+    resp = api.create_namespaced_deployment(
+        body=deployment, namespace=namespace
+    )
+  File "C:\Users\shahi\AppData\Roaming\Python\Python314\site-packages\pydantic\_internal\_validate_call.py", line 40, 
+in wrapper_function
+    return wrapper(*args, **kwargs)
+  File "C:\Users\shahi\AppData\Roaming\Python\Python314\site-packages\pydantic\_internal\_validate_call.py", line 137, 
+in __call__
+    res = self.__pydantic_validator__.validate_python(pydantic_core.ArgsKwargs(args, kwargs))
+  File "C:\Users\shahi\AppData\Roaming\Python\Python314\site-packages\kubernetes\client\api\apps_v1_api.py", line 749, 
+in create_namespaced_deployment
+    return self.api_client._call_with_legacy_options(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        _param,
+        ^^^^^^^
+    ...<4 lines>...
+        True,
+        ^^^^^
+    )
+    ^
+  File "C:\Users\shahi\AppData\Roaming\Python\Python314\site-packages\kubernetes\client\api_client.py", line 202, in 
+_call_with_legacy_options
+    return call()
+  File "C:\Users\shahi\AppData\Roaming\Python\Python314\site-packages\kubernetes\client\api_client.py", line 187, in 
+call
+    api_response = self.response_deserialize(
+        response_data=response_data,
+        response_types_map=response_types_map,
+    )
+  File "C:\Users\shahi\AppData\Roaming\Python\Python314\site-packages\kubernetes\client\api_client.py", line 432, in 
+response_deserialize
+    raise ApiException.from_response(
+          ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        http_resp=response_data,
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+        body=response_text,
+        ^^^^^^^^^^^^^^^^^^^
+        data=return_data,
+        ^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\shahi\AppData\Roaming\Python\Python314\site-packages\kubernetes\client\exceptions.py", line 141, in 
+from_response
+    raise BadRequestException(http_resp=http_resp, body=body, data=data)
+kubernetes.client.exceptions.BadRequestException: (400)
+Reason: Bad Request
+HTTP response headers: HTTPHeaderDict({'Audit-Id': 'dcd13ffe-f600-4d01-8822-34dc8ae44de2', 'Cache-Control': 'no-cache, 
+private', 'Content-Type': 'application/json', 'X-Kubernetes-Pf-Flowschema-Uid': 
+'c9412815-dce3-4d8f-a215-1aec3065bc07', 'X-Kubernetes-Pf-Prioritylevel-Uid': '9b19842e-d5f3-452f-b766-29d1508befd1', 
+'Date': 'Sun, 25 Oct 2026 12:04:07 GMT', 'Content-Length': '533'})
+HTTP response body: {"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"admission webhook 
+\"validate.kyverno.svc-fail\" denied the request: \n\nresource Deployment/bad-tenant/deployment-stuffer was blocked 
+due to the following policies \n\nrestrict-priority-class-bad-tenant:\n  autogen-block-high-priority-in-bad-tenant: 
+Pods in the 'bad-tenant' namespace are not allowed to use a preempting high-priority PriorityClass ('high-priority' or 
+'attacker-high-priority'). Use 'high-priority-nonpreempting' instead.\n","code":400}
+
+
+
+## Direct pod-level admission test: kubectl run evictor-test (high-priority) in bad-tenant
+kubectl : Error from server: admission webhook "validate.kyverno.svc-fail" denied the request: 
+At line:4 char:12
++ $podtest = kubectl run evictor-test --image=nginxdemos/hello -n bad-t ...
++            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Error from serv...d the request: :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+resource Pod/bad-tenant/evictor-test was blocked due to the following policies 
+
+restrict-priority-class-bad-tenant:
+  block-high-priority-in-bad-tenant: Pods in the 'bad-tenant' namespace are not allowed to use a preempting 
+high-priority PriorityClass ('high-priority' or 'attacker-high-priority'). Use 'high-priority-nonpreempting' instead.

@@ -1,0 +1,21 @@
+﻿# Phase 5 attack run (BEFORE mitigation) - started 2026-10-25T16:55:36.3671873+05:00
+## command: py evict.py -n bad-tenant -r 20 --cpu 1 -p high-priority -t 7
+
+py : [INFO] deployment created with 20 replicas
+At line:7 char:1
++ py "$repo\evict.py" -n bad-tenant -r 20 --cpu 1 -p high-priority -t 7 ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([INFO] deployme...ith 20 replicas:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[INFO] evictor pod is created
+[INFO] To delete deployment: kubectl -n bad-tenant delete deployment deployment-stuffer
+[INFO] To delete evictor pod: kubectl -n bad-tenant delete pod evictor
+
+## Timestamped victim-pod watch during attack (DoS persistence)
+16:56:49.034  victims[ds-no-priority-dzq6q=Pending  ds-no-priority-pxqkr=Pending  ds-no-priority-t6ghb=Pending]  attacker_pods=21
+16:56:54.627  victims[ds-no-priority-dzq6q=Pending  ds-no-priority-pxqkr=Pending  ds-no-priority-t6ghb=Pending]  attacker_pods=21
+16:57:00.281  victims[ds-no-priority-dzq6q=Pending  ds-no-priority-pxqkr=Pending  ds-no-priority-t6ghb=Pending]  attacker_pods=21
+16:57:05.788  victims[ds-no-priority-dzq6q=Pending  ds-no-priority-pxqkr=Pending  ds-no-priority-t6ghb=Pending]  attacker_pods=21
+16:57:11.315  victims[ds-no-priority-dzq6q=Pending  ds-no-priority-pxqkr=Pending  ds-no-priority-t6ghb=Pending]  attacker_pods=21
+16:57:16.951  victims[ds-no-priority-dzq6q=Pending  ds-no-priority-pxqkr=Pending  ds-no-priority-t6ghb=Pending]  attacker_pods=21
