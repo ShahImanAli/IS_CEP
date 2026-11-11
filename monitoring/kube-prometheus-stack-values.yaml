@@ -1,0 +1,76 @@
+# Helm values for the kube-prometheus-stack used by the CEP monitoring layer.
+# Installs Prometheus + kube-state-metrics + node-exporter + Grafana, trimmed
+# down so it runs comfortably on the 3-node Minikube 'cep' cluster.
+#
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm repo update
+#   helm upgrade --install cep-mon prometheus-community/kube-prometheus-stack \
+#     -n monitoring --create-namespace -f monitoring/kube-prometheus-stack-values.yaml
+#
+# (The cep-runner.ps1 menu option "G" does all of this for you.)
+
+# Alertmanager is not needed for the demo -> one fewer image to pull.
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: true
+  # Demo credentials. Login at http://localhost:3000  (user: admin)
+  adminUser: admin
+  adminPassword: cep-admin
+  service:
+    type: ClusterIP           # we reach it via `kubectl port-forward`
+  # Minikube's disk is slow, so Grafana's first-boot DB migrations can take a
+  # few minutes. The default liveness probe would kill Grafana mid-migration
+  # and restart it in a loop. These patient probes give it time to finish.
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 120
+    periodSeconds: 15
+    timeoutSeconds: 30
+    failureThreshold: 60
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 60
+  defaultDashboardsEnabled: true   # ship the stock k8s dashboards too (bonus)
+  sidecar:
+    dashboards:
+      enabled: true
+      # The sidecar auto-imports any ConfigMap carrying this label.
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: monitoring
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true           # auto-wires the Prometheus datasource
+
+prometheus:
+  prometheusSpec:
+    retention: 2h             # short retention is plenty for a demo
+    scrapeInterval: 15s
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 600Mi
+    # Scrape every ServiceMonitor/PodMonitor, not only ones the chart labels.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+
+# These are the sources every panel in the CEP dashboard reads from.
+kube-state-metrics:
+  enabled: true
+nodeExporter:
+  enabled: true
+prometheusOperator:
+  enabled: true

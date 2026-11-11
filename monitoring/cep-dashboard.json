@@ -1,0 +1,293 @@
+{
+  "uid": "cep-preempt-dos",
+  "title": "CEP - Pod Priority Preemption DoS",
+  "tags": ["cep", "security", "preemption", "dos"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "hide": 0,
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "",
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "mode": "markdown",
+        "content": "## Pod Priority Preemption DoS - live view\nThis attack is a **reservation / scheduling DoS**, not a compute flood. Watch **CPU *requests* climb toward capacity while actual *usage* stays flat**, victim pods pile up as **Pending**, the `bad-tenant` namespace **floods with pods**, and the **ResourceQuota caps** it once Mitigation 1 is applied. (Preemption *events* themselves are logged separately by `detector.py` -> `preemption_log.csv`.)"
+      }
+    },
+
+    {
+      "id": 2,
+      "type": "gauge",
+      "title": "Cluster CPU reserved (% of capacity)",
+      "description": "Single-number health of the whole cluster's CPU reservations. Green when healthy, red as the attacker reserves the cluster.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 5, "x": 0, "y": 3 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "orange", "value": 70 },
+            { "color": "red", "value": 85 }
+          ] }
+        },
+        "overrides": []
+      },
+      "options": { "showThresholdMarkers": true, "showThresholdLabels": false },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "100 * sum(kube_pod_container_resource_requests{resource=\"cpu\"}) / sum(kube_node_status_allocatable{resource=\"cpu\"})",
+          "legendFormat": "CPU reserved"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Cluster CPU: Requests vs Actual Usage vs Capacity (cores)",
+      "description": "The signature panel. 'Requests (reserved)' shoots up toward 'Capacity' during the attack while 'Actual usage' barely moves - proving the DoS is reservation-based, not CPU load.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 13, "x": 5, "y": 3 },
+      "fieldConfig": {
+        "defaults": { "unit": "none", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Capacity (allocatable)" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "dash": [8, 6], "fill": "dash" } },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+            ] },
+          { "matcher": { "id": "byName", "options": "Requests (reserved)" },
+            "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } } ] },
+          { "matcher": { "id": "byName", "options": "Actual usage" },
+            "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } } ] }
+        ]
+      },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"})", "legendFormat": "Requests (reserved)" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[2m]))", "legendFormat": "Actual usage" },
+        { "refId": "C", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(kube_node_status_allocatable{resource=\"cpu\"})", "legendFormat": "Capacity (allocatable)" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Victim pods Pending now",
+      "description": "Zero = healthy. Non-zero = victims are being denied service.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 3 },
+      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [
+        { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "area", "textMode": "value" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(kube_pod_status_phase{phase=\"Pending\"})", "legendFormat": "pending" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "bad-tenant pods (used / cap)",
+      "description": "Live pod count against the quota's 10-pod ceiling.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 7 },
+      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [
+        { "color": "green", "value": null }, { "color": "red", "value": 8 } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "textMode": "value_and_name" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "kube_resourcequota{namespace=\"bad-tenant\",resource=\"pods\",type=\"used\"}", "legendFormat": "used" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "kube_resourcequota{namespace=\"bad-tenant\",resource=\"pods\",type=\"hard\"}", "legendFormat": "cap" }
+      ]
+    },
+
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "CPU requests as % of allocatable, per node",
+      "description": "Per-node scheduling saturation. During the attack each node hits 88-99%; after hardening it drops back to ~16-24%.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 11 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null }, { "color": "orange", "value": 70 }, { "color": "red", "value": 85 } ] }
+        },
+        "overrides": []
+      },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "100 * sum by (node) (kube_pod_container_resource_requests{resource=\"cpu\"}) / sum by (node) (kube_node_status_allocatable{resource=\"cpu\"})",
+          "legendFormat": "{{node}}" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Pending pods by namespace (victims denied service)",
+      "description": "Evicted victim pods are recreated but stuck Pending while the attack holds the cluster. A spike here = active DoS.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 11 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } } },
+        "overrides": []
+      },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (namespace) (kube_pod_status_phase{phase=\"Pending\"})", "legendFormat": "{{namespace}}" }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Running pods by namespace (attacker flood)",
+      "description": "bad-tenant jumps to ~21 pods during an unmitigated attack; the ResourceQuota caps it to ~2 with Mitigation 1; Kyverno (Mitigation 3) keeps it at 0.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 11 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "bad-tenant" },
+            "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } } ] }
+        ]
+      },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (namespace) (kube_pod_status_phase{phase=\"Running\"})", "legendFormat": "{{namespace}}" }
+      ]
+    },
+
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "bad-tenant ResourceQuota - CPU requests: used vs hard cap (Mitigation 1)",
+      "description": "Proof the quota bounds the blast radius: 'used' can never exceed the 2-core 'hard cap'. (Zero/absent before the quota is applied.)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 19 },
+      "fieldConfig": {
+        "defaults": { "unit": "none", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "hard cap" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "dash": [8, 6], "fill": "dash" } },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } } ] }
+        ]
+      },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "kube_resourcequota{namespace=\"bad-tenant\",resource=\"requests.cpu\",type=\"used\"}", "legendFormat": "used" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "kube_resourcequota{namespace=\"bad-tenant\",resource=\"requests.cpu\",type=\"hard\"}", "legendFormat": "hard cap" }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Cluster memory: Requests vs Capacity (bytes)",
+      "description": "Memory stays low (~12-15% of capacity) throughout - confirming the attack is driven by CPU reservations, not memory pressure.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 19 },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Capacity (allocatable)" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "dash": [8, 6], "fill": "dash" } },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } } ] }
+        ]
+      },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\"})", "legendFormat": "Requests (reserved)" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(kube_node_status_allocatable{resource=\"memory\"})", "legendFormat": "Capacity (allocatable)" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "piechart",
+      "title": "CPU requests by namespace (who is reserving the cluster)",
+      "description": "During the attack, bad-tenant dominates total CPU reservations - a clear visual of the abuse.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 19 },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "pieType": "donut", "legend": { "displayMode": "list", "placement": "right", "values": ["value"] }
+      },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (namespace) (kube_pod_container_resource_requests{resource=\"cpu\"})", "legendFormat": "{{namespace}}" }
+      ]
+    },
+
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Nodes Ready",
+      "description": "Cluster health - should stay at 3/3 throughout.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 27 },
+      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [
+        { "color": "red", "value": null }, { "color": "green", "value": 3 } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "none", "textMode": "value" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(kube_node_status_condition{condition=\"Ready\",status=\"true\"})", "legendFormat": "ready" }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Total Running pods (cluster)",
+      "description": "All running pods across the cluster.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 27 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "colorMode": "none", "graphMode": "area", "textMode": "value" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(kube_pod_status_phase{phase=\"Running\"})", "legendFormat": "running" }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "bad-tenant CPU reserved (cores used / cap)",
+      "description": "Mitigation 1 in one tile - used can never exceed the 2-core cap.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 27 },
+      "fieldConfig": { "defaults": { "unit": "none", "thresholds": { "mode": "absolute", "steps": [
+        { "color": "green", "value": null }, { "color": "orange", "value": 1.6 } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "textMode": "value_and_name" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "kube_resourcequota{namespace=\"bad-tenant\",resource=\"requests.cpu\",type=\"used\"}", "legendFormat": "cores used" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "kube_resourcequota{namespace=\"bad-tenant\",resource=\"requests.cpu\",type=\"hard\"}", "legendFormat": "cores cap" }
+      ]
+    }
+  ]
+}

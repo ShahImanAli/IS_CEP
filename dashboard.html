@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preemption DoS</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --panel:#ffffff; --ink:#131722; --muted:#5b6475;
+    --line:#e4e7ef; --accent:#3b63f6; --bad:#e23b4e; --good:#1ba672;
+    --badbg:#fdecee; --goodbg:#e7f6ef; --shadow:0 1px 3px rgba(20,30,60,.08),0 8px 24px rgba(20,30,60,.06);
+  }
+  :root:not([data-theme="light"]){ }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e1117; --panel:#161b24; --ink:#eef1f7; --muted:#9aa3b5;
+      --line:#262c38; --accent:#6f8cff; --bad:#ff6b7b; --good:#3dd699;
+      --badbg:#2a1619; --goodbg:#102a21; --shadow:0 1px 3px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e1117; --panel:#161b24; --ink:#eef1f7; --muted:#9aa3b5;
+    --line:#262c38; --accent:#6f8cff; --bad:#ff6b7b; --good:#3dd699;
+    --badbg:#2a1619; --goodbg:#102a21; --shadow:0 1px 3px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;line-height:1.5}
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 16px 80px}
+  header.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  h1{font-size:1.7rem;margin:0 0 4px;letter-spacing:-.02em}
+  .sub{color:var(--muted);margin:0;max-width:62ch}
+  .tag{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+  button.theme{background:var(--panel);color:var(--ink);border:1px solid var(--line);
+    border-radius:10px;padding:8px 12px;cursor:pointer;font-size:.85rem;box-shadow:var(--shadow)}
+  section{margin-top:34px}
+  h2{font-size:1.15rem;margin:0 0 14px;display:flex;align-items:center;gap:10px}
+  h2 .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;
+    background:var(--accent);color:#fff;font-size:.8rem;font-weight:700}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px 18px;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:14px}
+  .flow{grid-template-columns:repeat(4,1fr)}
+  .flow .step{position:relative;text-align:center}
+  .flow .step .ic{font-size:1.6rem}
+  .flow .step small{color:var(--muted);display:block;margin-top:4px;font-size:.82rem}
+  .flow .step b{display:block;margin-top:8px;font-size:.95rem}
+  .flow .step:not(:last-child)::after{content:"\2192";position:absolute;right:-12px;top:34px;
+    color:var(--muted);font-size:1.3rem}
+  .cmp{grid-template-columns:1fr 1fr}
+  .metric{display:flex;flex-direction:column;gap:10px;padding:14px 0;border-bottom:1px solid var(--line)}
+  .metric:last-child{border-bottom:none}
+  .metric .lbl{font-size:.9rem;color:var(--muted)}
+  .bars{display:flex;gap:14px}
+  .bar{flex:1}
+  .bar .v{font-weight:700;font-size:1.05rem;margin-bottom:4px}
+  .track{height:10px;border-radius:6px;background:var(--line);overflow:hidden}
+  .fill{height:100%;border-radius:6px;transition:width .9s cubic-bezier(.2,.7,.2,1)}
+  .fill.bad{background:var(--bad)} .fill.good{background:var(--good)}
+  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px}
+  .pill.bad{background:var(--badbg);color:var(--bad)} .pill.good{background:var(--goodbg);color:var(--good)}
+  .m3{grid-template-columns:repeat(3,1fr)}
+  .mit h3{margin:.1rem 0 .3rem;font-size:1rem}
+  .mit p{margin:0;color:var(--muted);font-size:.9rem}
+  .mit .k{font-family:ui-monospace,Consolas,monospace;font-size:.78rem;color:var(--accent);
+    background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;display:inline-block;margin-top:8px}
+  .loader{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;
+    cursor:pointer;font-size:.9rem;font-weight:600}
+  .btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+  .verdict{margin-top:16px;padding:16px;border-radius:12px;font-weight:600;display:none}
+  .verdict.show{display:block}
+  .verdict.bad{background:var(--badbg);color:var(--bad)}
+  .verdict.good{background:var(--goodbg);color:var(--good)}
+  .stats{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px}
+  .stats .s{min-width:120px}
+  .stats .s b{font-size:1.6rem;display:block}
+  .stats .s span{color:var(--muted);font-size:.82rem}
+  table{width:100%;border-collapse:collapse;margin-top:14px;font-size:.84rem;display:none}
+  table.show{display:table}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--panel)}
+  td.r{color:var(--bad);font-weight:600;white-space:nowrap}
+  td.r.f{color:var(--muted);font-weight:500}
+  .scroll{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:12px;margin-top:10px}
+  .hint{color:var(--muted);font-size:.84rem;margin:8px 0 0}
+  footer{margin-top:50px;color:var(--muted);font-size:.8rem;text-align:center}
+  @media(max-width:720px){.flow,.cmp,.m3{grid-template-columns:1fr}.flow .step::after{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <span class="tag">Container Security &middot; CEP</span>
+      <h1>Pod Priority Preemption DoS</h1>
+      <p class="sub">Reproducing, detecting, and stopping a Denial-of-Service attack that abuses
+        Kubernetes pod priority &amp; preemption in a shared (multi-tenant) cluster.</p>
+    </div>
+    <button class="theme" id="theme">◐ Theme</button>
+  </header>
+
+  <!-- 1. The attack -->
+  <section>
+    <h2><span class="n">1</span>How the attack works</h2>
+    <div class="card">
+      <div class="grid flow">
+        <div class="step"><div class="ic">😈</div><b>Malicious tenant</b><small>creates pods in <code>bad-tenant</code></small></div>
+        <div class="step"><div class="ic">⬆️</div><b>Very high priority</b><small>+ large CPU <em>requests</em></small></div>
+        <div class="step"><div class="ic">⚖️</div><b>Scheduler preempts</b><small>evicts lower-priority pods to make room</small></div>
+        <div class="step"><div class="ic">💥</div><b>Denial of Service</b><small>victims stuck <em>Pending</em></small></div>
+      </div>
+      <p class="hint">Key insight: the damage comes from reserved CPU <strong>requests</strong> and preemption rights —
+        not from real CPU load. That is why <code>kubectl top</code> can look quiet while the cluster is down.</p>
+    </div>
+  </section>
+
+  <!-- 2. Before vs After -->
+  <section>
+    <h2><span class="n">2</span>Result: before vs after the defenses</h2>
+    <div class="grid cmp" id="cmp"></div>
+  </section>
+
+  <!-- 3. Mitigations -->
+  <section>
+    <h2><span class="n">3</span>Three layers of defense</h2>
+    <div class="grid m3">
+      <div class="card mit">
+        <span class="pill good">Mitigation 1</span>
+        <h3>Resource Quota</h3>
+        <p>Caps <code>bad-tenant</code> at 2 CPU / 10 pods, so large-scale pod stuffing is impossible.</p>
+        <span class="k">resourcequota.yml</span>
+      </div>
+      <div class="card mit">
+        <span class="pill good">Mitigation 2</span>
+        <h3>Non-preempting class</h3>
+        <p>A legitimate high-priority class that schedules high but <em>cannot evict</em> others
+           (<code>preemptionPolicy: Never</code>).</p>
+        <span class="k">nonpreempting-priorityclass.yml</span>
+      </div>
+      <div class="card mit">
+        <span class="pill good">Mitigation 3 &middot; primary</span>
+        <h3>Kyverno admission policy</h3>
+        <p>Rejects any attacker pod using a preempting class <em>at creation time, before scheduling</em>.</p>
+        <span class="k">restrict-priority-class.yml</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Live log -->
+  <section>
+    <h2><span class="n">4</span>Live detector log</h2>
+    <div class="card">
+      <div class="loader">
+        <input type="file" id="file" accept=".csv" hidden>
+        <button class="btn" id="pick">📂 Load a detector CSV…</button>
+        <button class="btn ghost" id="demoBefore">Show sample: attack succeeds</button>
+        <button class="btn ghost" id="demoAfter">Show sample: attack blocked</button>
+      </div>
+      <p class="hint">Pick your <code>preemption_log.csv</code> (or the BEFORE / AFTER files). The detector
+        appends to it live while you run the demo — reload the file to refresh.</p>
+      <div class="verdict" id="verdict"></div>
+      <div class="stats" id="stats"></div>
+      <div class="scroll"><table id="tbl">
+        <thead><tr><th>Time</th><th>Reason</th><th>Victim pod</th><th>Preempted by</th><th>Pending (s)</th></tr></thead>
+        <tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <footer>CEP — Detecting &amp; Mitigating Pod Priority Preemption DoS in Multi-Tenant Kubernetes.
+    Open <code>demo.ps1</code> to run the live steps.</footer>
+</div>
+
+<script>
+// ---- before/after comparison data (from comparison-results.md) ----
+const metrics = [
+  {label:"Pods evicted (Preempted)", before:3,  after:0,  max:3,  unit:"",  invert:true},
+  {label:"Victim pods affected",     before:3,  after:0,  max:3,  unit:"/3",invert:true},
+  {label:"Attacker pods scheduled",  before:21, after:0,  max:21, unit:"",  invert:true},
+  {label:"Peak CPU requests / node", before:99, after:24, max:100,unit:"%", invert:true},
+];
+const cmp = document.getElementById('cmp');
+function panel(title, which){
+  const el = document.createElement('div'); el.className='card';
+  const good = which==='after';
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <strong>${title}</strong>
+      <span class="pill ${good?'good':'bad'}">${good?'defended':'undefended'}</span></div>`;
+  metrics.forEach(m=>{
+    const v = which==='before'?m.before:m.after;
+    const pct = Math.round(100*v/m.max);
+    const cls = good ? 'good':'bad';
+    const row = document.createElement('div'); row.className='metric';
+    row.innerHTML = `<div class="lbl">${m.label}</div>
+      <div class="v" style="font-size:1.1rem;font-weight:700">${v}${m.unit}</div>
+      <div class="track"><div class="fill ${cls}" style="width:0%"></div></div>`;
+    el.appendChild(row);
+    requestAnimationFrame(()=>setTimeout(()=>{row.querySelector('.fill').style.width=pct+'%';},60));
+  });
+  return el;
+}
+cmp.appendChild(panel('BEFORE — attack succeeds','before'));
+cmp.appendChild(panel('AFTER — attack blocked','after'));
+
+// ---- theme toggle ----
+const root=document.documentElement;
+document.getElementById('theme').onclick=()=>{
+  const cur=root.getAttribute('data-theme')||
+    (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  root.setAttribute('data-theme', cur==='dark'?'light':'dark');
+};
+
+// ---- CSV parsing ----
+function parseCSV(text){
+  const rows=[]; let i=0,f='',row=[],q=false;
+  text=text.replace(/^﻿/,'');
+  while(i<text.length){const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else { if(c==='"') q=true;
+      else if(c===','){row.push(f);f='';}
+      else if(c==='\n'){row.push(f);rows.push(row);row=[];f='';}
+      else if(c==='\r'){} else f+=c; } i++; }
+  if(f.length||row.length){row.push(f);rows.push(row);}
+  return rows.filter(r=>r.length>1||(r.length===1&&r[0].trim()!==''));
+}
+function shortTime(iso){ const d=new Date(iso); return isNaN(d)?iso:d.toLocaleTimeString(); }
+
+function render(rows){
+  const tbody=document.querySelector('#tbl tbody'); tbody.innerHTML='';
+  const body = rows.slice(1); // drop header
+  let preempted=0, failed=0; const victims=new Set();
+  body.forEach(r=>{
+    const [ts,ns,pod,reason,msg,by]=r;
+    if(reason==='Preempted'){preempted++; victims.add(ns+'/'+pod);}
+    else if(reason==='FailedScheduling'){failed++;}
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${shortTime(ts)}</td>
+      <td class="r ${reason==='FailedScheduling'?'f':''}">${reason||''}</td>
+      <td>${pod||''}</td><td>${(by&&by!=='unknown')?by:'—'}</td>
+      <td>${r[6]||'0'}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('tbl').classList.add('show');
+  document.getElementById('stats').innerHTML=
+    `<div class="s"><b style="color:var(--bad)">${preempted}</b><span>pods evicted (Preempted)</span></div>
+     <div class="s"><b>${failed}</b><span>FailedScheduling events</span></div>
+     <div class="s"><b>${victims.size}</b><span>distinct victim pods</span></div>
+     <div class="s"><b>${body.length}</b><span>total events logged</span></div>`;
+  const v=document.getElementById('verdict');
+  v.className='verdict show '+(preempted>0?'bad':'good');
+  v.textContent = preempted>0
+    ? `⚠ Attack SUCCEEDED — ${preempted} eviction(s) recorded. The cluster was undefended.`
+    : (body.length===0
+        ? '✓ No preemption events in this log — the attack was blocked before it could evict anything.'
+        : '✓ Attack BLOCKED — events were logged but 0 pods were evicted.');
+}
+
+document.getElementById('pick').onclick=()=>document.getElementById('file').click();
+document.getElementById('file').onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const rd=new FileReader(); rd.onload=()=>render(parseCSV(rd.result)); rd.readAsText(f);
+};
+
+// ---- embedded samples (so the page demos without a file) ----
+const SAMPLE_BEFORE=`timestamp,namespace,evicted_pod_name,reason,message,preempting_pod,pending_duration_seconds
+2026-10-25T11:55:41+00:00,bad-tenant,deployment-stuffer-plc5c,FailedScheduling,Insufficient cpu,unknown,0.0
+2026-10-25T11:55:42+00:00,default,ds-no-priority-hdsng,Preempted,Preempted by pod on node cep,bad-tenant/deployment-stuffer-plc5c,0.0
+2026-10-25T11:55:42+00:00,default,ds-no-priority-2ftkw,Preempted,Preempted by pod on node cep-m03,bad-tenant/deployment-stuffer-ndtgx,0.0
+2026-10-25T11:55:50+00:00,default,ds-no-priority-mr6np,Preempted,Preempted by pod on node cep-m02,bad-tenant/evictor,0.0
+2026-10-25T11:55:52+00:00,default,ds-no-priority-t6ghb,FailedScheduling,No preemption victims found,unknown,5.0
+2026-10-25T11:55:53+00:00,default,ds-no-priority-pxqkr,FailedScheduling,No preemption victims found,unknown,0.0`;
+const SAMPLE_AFTER=`timestamp,namespace,evicted_pod_name,reason,message,preempting_pod,pending_duration_seconds`;
+document.getElementById('demoBefore').onclick=()=>render(parseCSV(SAMPLE_BEFORE));
+document.getElementById('demoAfter').onclick=()=>render(parseCSV(SAMPLE_AFTER));
+</script>
+</body>
+</html>
